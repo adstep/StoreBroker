@@ -33,6 +33,7 @@ $script:ErrorActionPreference = 'Stop'
 [CertificateIdentity]$script:certificateIdentity = $null
 [CredentialIdentity]$script:credentialIdentity = $null
 [ProxyIdentity]$script:proxyIdentity = $null
+$script:credential = $null
 
 # By default, ConvertTo-Json won't expand nested objects further than a depth of 2
 # We always want to expand as deep as possible, so set this to a much higher depth
@@ -389,27 +390,27 @@ function Set-StoreBrokerAuthentication
 
 function Set-StoreBrokerManagedIdentityAuthentication
 {
-<#
-    .SYNOPSIS
-        Sets the certificate that will be used to authenticate with Store APIs.
-
-    .DESCRIPTION
-        Sets the certificate that will be used to authenticate with Store APIs.
-        The cached credential can always be cleared by calling Clear-StoreBrokerAuthentication.
-
-        The Git repo for this module can be found here: http://aka.ms/StoreBroker
-
-    .PARAMETER ClientId
-        Client ID of the user assigned managed identity assigned to the azure resource.
-
-    .EXAMPLE
-        Set-StoreBrokerAuthentication -TenantId "abcdef01-2345-6789-0abc-def123456789" -ClientId "abcdef01-2345-6789-0abc-def123456789" -Certificate $certificate
-
-        Caches the tenantId and clientId for the duration of the
-        PowerShell session.  Caches the certificate to be used for authentication.
-        These values will be cached for the duration of this PowerShell session.
-        They can be cleared by calling Clear-StoreBrokerAuthentication.
-#>
+    <#
+        .SYNOPSIS
+            Sets the certificate that will be used to authenticate with Store APIs.
+    
+        .DESCRIPTION
+            Sets the certificate that will be used to authenticate with Store APIs.
+            The cached credential can always be cleared by calling Clear-StoreBrokerAuthentication.
+    
+            The Git repo for this module can be found here: http://aka.ms/StoreBroker
+    
+        .PARAMETER ClientId
+            Client ID of the user assigned managed identity assigned to the azure resource.
+    
+        .EXAMPLE
+            Set-StoreBrokerAuthentication -TenantId "abcdef01-2345-6789-0abc-def123456789" -ClientId "abcdef01-2345-6789-0abc-def123456789" -Certificate $certificate
+    
+            Caches the tenantId and clientId for the duration of the
+            PowerShell session.  Caches the certificate to be used for authentication.
+            These values will be cached for the duration of this PowerShell session.
+            They can be cleared by calling Clear-StoreBrokerAuthentication.
+    #>
     [CmdletBinding(SupportsShouldProcess)]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidGlobalVars", "", Justification="We use global variables sparingly and intentionally for module configuration, and employ a consistent naming convention.")]
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUsePSCredentialType", "", Justification="The System.Management.Automation.Credential() attribute does not appear to work in PowerShell v4 which we need to support.")]
@@ -417,21 +418,96 @@ function Set-StoreBrokerManagedIdentityAuthentication
         [string] $ClientId = $null
 
     )
-
-    Write-InvocationLog
-
     Clear-StoreBrokerAuthentication
 
-    if ($PSCmdlet.ShouldProcess("", "Cache managed identity"))
-    {
-        $script:managedIdentity = @{}
-    }
+    Import-AzureIdentity
 
-    if ($PSCmdlet.ShouldProcess($ClientId, "Cache managed identity client id"))
-    {
-        $script:managedIdentity.clientId = $ClientId
-    }
+    $script:credential = [Microsoft.Azure.Identity.ManagedIdentityCredential]::new($ClientId)
 }
+
+function Set-StoreBrokerDefaultAuthentication
+{
+    <#
+        .SYNOPSIS
+            Sets the certificate that will be used to authenticate with Store APIs.
+    
+        .DESCRIPTION
+            Sets the certificate that will be used to authenticate with Store APIs.
+            The cached credential can always be cleared by calling Clear-StoreBrokerAuthentication.
+    
+            The Git repo for this module can be found here: http://aka.ms/StoreBroker
+    
+        .PARAMETER ClientId
+            Client ID of the user assigned managed identity assigned to the azure resource.
+    
+        .EXAMPLE
+            Set-StoreBrokerAuthentication -TenantId "abcdef01-2345-6789-0abc-def123456789" -ClientId "abcdef01-2345-6789-0abc-def123456789" -Certificate $certificate
+    
+            Caches the tenantId and clientId for the duration of the
+            PowerShell session.  Caches the certificate to be used for authentication.
+            These values will be cached for the duration of this PowerShell session.
+            They can be cleared by calling Clear-StoreBrokerAuthentication.
+    #>
+    [CmdletBinding(SupportsShouldProcess)]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidGlobalVars", "", Justification="We use global variables sparingly and intentionally for module configuration, and employ a consistent naming convention.")]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUsePSCredentialType", "", Justification="The System.Management.Automation.Credential() attribute does not appear to work in PowerShell v4 which we need to support.")]
+    param(
+        [string] $ClientId = $null
+
+    )
+    # Clear-StoreBrokerAuthentication
+
+    Import-AzureIdentity
+
+    $script:credential = [Azure.Identity.DefaultAzureCredential]::new($ClientId)
+}
+
+
+# function Set-StoreBrokerManagedIdentityAuthentication
+# {
+# <#
+#     .SYNOPSIS
+#         Sets the certificate that will be used to authenticate with Store APIs.
+
+#     .DESCRIPTION
+#         Sets the certificate that will be used to authenticate with Store APIs.
+#         The cached credential can always be cleared by calling Clear-StoreBrokerAuthentication.
+
+#         The Git repo for this module can be found here: http://aka.ms/StoreBroker
+
+#     .PARAMETER ClientId
+#         Client ID of the user assigned managed identity assigned to the azure resource.
+
+#     .EXAMPLE
+#         Set-StoreBrokerAuthentication -TenantId "abcdef01-2345-6789-0abc-def123456789" -ClientId "abcdef01-2345-6789-0abc-def123456789" -Certificate $certificate
+
+#         Caches the tenantId and clientId for the duration of the
+#         PowerShell session.  Caches the certificate to be used for authentication.
+#         These values will be cached for the duration of this PowerShell session.
+#         They can be cleared by calling Clear-StoreBrokerAuthentication.
+# #>
+#     [CmdletBinding(SupportsShouldProcess)]
+#     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSAvoidGlobalVars", "", Justification="We use global variables sparingly and intentionally for module configuration, and employ a consistent naming convention.")]
+#     [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUsePSCredentialType", "", Justification="The System.Management.Automation.Credential() attribute does not appear to work in PowerShell v4 which we need to support.")]
+#     param(
+#         [string] $ClientId = $null
+
+#     )
+
+#     Write-InvocationLog
+
+#     Clear-StoreBrokerAuthentication
+
+#     if ($PSCmdlet.ShouldProcess("", "Cache managed identity"))
+#     {
+#         $script:managedIdentity = @{}
+#     }
+
+#     if ($PSCmdlet.ShouldProcess($ClientId, "Cache managed identity client id"))
+#     {
+#         $script:managedIdentity.clientId = $ClientId
+#     }
+# }
 
 function Set-StoreBrokerCertificateAuthentication
 {
@@ -590,6 +666,12 @@ function Get-AccessToken
     param(
         [switch] $NoStatus
     )
+
+    $scopes = @("https://api.partner.microsoft.com/.default")
+    $tokenRequestContext = [Azure.Core.TokenRequestContext]::new($scopes)
+    $accessToken = $script:credential.GetToken($tokenRequestContext)
+
+    return $accessToken.Token
 
     # If we have a value for the proxy endpoint, that means we're using the proxy.
     # In that scenario, we don't need to do any work here.
@@ -1011,6 +1093,49 @@ function Get-ServiceEndpoint
         Write-Log -Message "Using PROD service endpoint" -Level Verbose
         return $serviceEndpointProd
     }
+}
+
+function Import-AzureIdentity 
+{
+    $nugetPackageName = "Microsoft.Identity.Client.Extensions.Msal"
+    $nugetPackageVersion = "4.61.3"
+    $assemblyPackageTailDir = "Microsoft.Identity.Client.Extensions.Msal.4.61.3\lib\netstandard2.0\"
+    $assemblyName = "Microsoft.Identity.Client.Extensions.Msal.dll"
+
+    $dllPath = Get-NugetPackageDllPath -NugetPackageName $nugetPackageName -NugetPackageVersion $nugetPackageVersion -AssemblyPackageTailDirectory $assemblyPackageTailDir -AssemblyName $assemblyName -NoStatus:$NoStatus
+    Add-Type -Path $dllPath
+
+    $nugetPackageName = "Microsoft.IdentityModel.Abstractions"
+    $nugetPackageVersion = "6.35.0"
+    $assemblyPackageTailDir = "Microsoft.IdentityModel.Abstractions.6.35.0\lib\netstandard2.0\"
+    $assemblyName = "Microsoft.IdentityModel.Abstractions.dll"
+
+    $dllPath = Get-NugetPackageDllPath -NugetPackageName $nugetPackageName -NugetPackageVersion $nugetPackageVersion -AssemblyPackageTailDirectory $assemblyPackageTailDir -AssemblyName $assemblyName -NoStatus:$NoStatus
+    Add-Type -Path $dllPath
+
+    $nugetPackageName = "Microsoft.Identity.Client"
+    $nugetPackageVersion = "4.61.3"
+    $assemblyPackageTailDir = "Microsoft.Identity.Client.4.61.3\lib\netstandard2.0\"
+    $assemblyName = "Microsoft.Identity.Client.dll"
+
+    $dllPath = Get-NugetPackageDllPath -NugetPackageName $nugetPackageName -NugetPackageVersion $nugetPackageVersion -AssemblyPackageTailDirectory $assemblyPackageTailDir -AssemblyName $assemblyName -NoStatus:$NoStatus
+    Add-Type -Path $dllPath
+
+    $nugetPackageName = "Azure.Core"
+    $nugetPackageVersion = "1.40.0"
+    $assemblyPackageTailDir = "Azure.Core.1.40.0\lib\netstandard2.0\"
+    $assemblyName = "Azure.Core.dll"
+
+    $dllPath = Get-NugetPackageDllPath -NugetPackageName $nugetPackageName -NugetPackageVersion $nugetPackageVersion -AssemblyPackageTailDirectory $assemblyPackageTailDir -AssemblyName $assemblyName -NoStatus:$NoStatus
+    Add-Type -Path $dllPath
+
+    $nugetPackageName = "Azure.Identity"
+    $nugetPackageVersion = "1.12.0"
+    $assemblyPackageTailDir = "Azure.Identity.1.12.0\lib\netstandard2.0\"
+    $assemblyName = "Azure.Identity.dll"
+
+    $dllPath = Get-NugetPackageDllPath -NugetPackageName $nugetPackageName -NugetPackageVersion $nugetPackageVersion -AssemblyPackageTailDirectory $assemblyPackageTailDir -AssemblyName $assemblyName -NoStatus:$NoStatus
+    Add-Type -Path $dllPath
 }
 
 function Get-MsalDllPath
